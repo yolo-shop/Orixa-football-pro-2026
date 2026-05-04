@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ORIXA PRO 2026 | SEASON 1</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+    <style>
+        :root { --ef-blue: #001f3f; --ef-gold: #ffd700; --ef-pink: #ff0055; --bg: #050a14; --epic: linear-gradient(135deg, #ffd700, #b8860b); --standard: linear-gradient(135deg, #1e40af, #1e293b); }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding-bottom: 90px; overflow-x: hidden; -webkit-user-select: none; }
+        
+        /* NAVIGATION */
+        .top-nav { background: var(--ef-blue); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--ef-gold); position: sticky; top: 0; z-index: 1000; }
+        .currency-box { display: flex; gap: 8px; }
+        .coin-pill { background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; font-weight: bold; border: 1px solid var(--ef-gold); color: var(--ef-gold); font-size: 11px; display: flex; align-items: center; gap: 4px; }
+
+        /* CARDS */
+        .player-card { width: 135px; border-radius: 12px; padding: 10px; margin: 8px; position: relative; text-align: center; border: 2px solid rgba(255,255,255,0.1); display: inline-block; vertical-align: top; }
+        .card-epic { background: var(--epic); color: black; box-shadow: 0 0 15px var(--ef-gold); border-color: white; animation: glow 2s infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 0 5px var(--ef-gold); } to { box-shadow: 0 0 20px var(--ef-gold); } }
+        .card-standard { background: var(--standard); color: white; }
+        .p-img { width: 70px; height: 70px; border-radius: 50%; background: #444; margin: 0 auto 8px; border: 2px solid white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; }
+        .p-rating { position: absolute; top: 5px; left: 5px; background: black; color: white; padding: 2px 5px; border-radius: 4px; font-size: 14px; font-weight: 900; }
+
+        /* UI COMPONENTS */
+        .section { display: none; padding: 15px; animation: slide 0.3s; }
+        .section.active { display: block; }
+        @keyframes slide { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .btn-main { background: var(--ef-pink); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; font-size: 14px; margin: 8px 0; }
+        .btn-mini { font-size: 9px; padding: 5px; border-radius: 4px; border: none; font-weight: bold; }
+
+        /* GAMEPLAY */
+        #penalty-field { background: #2e7d32; height: 200px; border-radius: 15px; border: 3px solid white; position: relative; margin: 15px 0; overflow: hidden; }
+        .keeper { position: absolute; top: 30px; left: 45%; font-size: 30px; transition: 0.3s; z-index: 10; }
+        .ball { position: absolute; bottom: 20px; left: 47%; font-size: 25px; transition: 0.5s; z-index: 5; }
+
+        /* LOGIN POPUP */
+        #login-bonus-ui { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; }
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050a14; z-index: 10000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #000; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #222; z-index: 1000; }
+        .nav-tab { color: #555; font-size: 10px; font-weight: bold; text-transform: uppercase; background: none; border: none; }
+        .nav-tab.active { color: var(--ef-gold); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <h2 style="color:var(--ef-gold); font-style:italic;">ORIXA PRO 26</h2>
+        <div style="width:40px; height:40px; border:4px solid #333; border-top-color:var(--ef-gold); border-radius:50%; animation: spin 1s linear infinite;"></div>
+        <p style="margin-top:15px; font-size:11px;">SERVER CONNECTION ACTIVE...</p>
+    </div>
+
+    <div id="login-bonus-ui">
+        <div style="background:var(--ef-blue); width:80%; border-radius:20px; border:2px solid var(--ef-gold); padding:25px; text-align:center;">
+            <h2 style="color:var(--ef-gold); margin:0;">LOGIN BONUS</h2>
+            <p style="font-size:12px; opacity:0.7;">Day <span id="streak-day">1</span> Rewards</p>
+            <div id="reward-icon" style="font-size:50px; margin:15px 0;">🎁</div>
+            <h3 id="reward-text" style="margin:0;">-</h3>
+            <button class="btn-main" style="margin-top:20px;" onclick="claimDaily()">CLAIM REWARD</button>
+        </div>
+    </div>
+
+    <div class="top-nav">
+        <div style="font-weight:900; letter-spacing:1px; font-style:italic;">ORIXA<span style="color:var(--ef-gold)">PRO 26</span></div>
+        <div class="currency-box">
+            <div class="coin-pill" style="border-color:#3b82f6; color:#3b82f6;">🔵 <span id="gp">0</span></div>
+            <div class="coin-pill">🟡 <span id="coins">0</span></div>
+        </div>
+    </div>
+
+    <div id="hub" class="section active">
+        <div id="champ-banner" style="display:none; background:var(--epic); color:black; padding:8px; border-radius:8px; margin-bottom:10px; font-weight:900; text-align:center;">🏆 DIV 1 CHAMPION</div>
+        <div style="background: linear-gradient(135deg, var(--ef-pink), var(--ef-blue)); padding: 20px; border-radius: 15px; margin-bottom: 15px;">
+            <div style="font-size:30px; font-weight:900;">DIV <span id="div-num">10</span></div>
+            <div id="div-title" style="font-size:12px; color:var(--ef-gold); font-weight:bold;">Rookie League</div>
+            <div style="background:rgba(0,0,0,0.3); height:8px; border-radius:4px; margin-top:10px;">
+                <div id="div-prog" style="background:var(--ef-gold); width:5%; height:100%; border-radius:4px;"></div>
+            </div>
+        </div>
+        <button class="btn-main" onclick="playMatch()">PVe: DIVISION MATCH</button>
+        <button class="btn-main" style="background:linear-gradient(to right, #ffd700, #ff8c00); color:black;" onclick="tab('penalty')">🎯 DAILY PENALTY CHALLENGE</button>
+    </div>
+
+    <div id="team" class="section">
+        <h2 style="color:var(--ef-gold); margin:0 0 10px 0;">DREAM TEAM</h2>
+        <div style="background:#161b26; padding:10px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-around; font-size:11px;">
+            <span>🏃 Exp: <b id="exp">0</b></span>
+            <span>⚡ Boost: <b id="bst">0</b></span>
+        </div>
+        <div id="player-list" style="text-align:center;"></div>
+    </div>
+
+    <div id="shop" class="section">
+        <h2 style="color:var(--ef-gold); margin:0 0 10px 0;">CONTRACT</h2>
+        <div style="background:rgba(255,215,0,0.1); border:1px dashed var(--ef-gold); padding:15px; border-radius:12px; margin-bottom:15px; text-align:center;">
+            <button class="btn-main" style="background:#1e40af; margin-top:8px;" onclick="watchAdReward()">📺 WATCH AD (100 COINS)</button>
+        </div>
+        <button class="btn-main" style="background:#161b26; border:1px solid var(--ef-gold);" onclick="sign('epic')">🟡 EPIC SIGNING (100 COINS)</button>
+        <button class="btn-main" style="background:#161b26; border:1px solid #3b82f6;" onclick="sign('standard')">🔵 STANDARD LIST (5,000 GP)</button>
+    </div>
+
+    <div id="penalty" class="section">
+        <h2 style="color:var(--ef-gold); margin:0;">PENALTY CHALLENGE</h2>
+        <div id="penalty-field">
+            <div id="keeper" class="keeper">🧤</div>
+            <div id="ball" class="ball">⚽</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <button class="btn-main" style="background:#333;" onclick="takePenalty(0)">LEFT</button>
+            <button class="btn-main" style="background:#333;" onclick="takePenalty(1)">CENTER</button>
+            <button class="btn-main" style="background:#333;" onclick="takePenalty(2)">RIGHT</button>
+        </div>
+        <p id="p-score" style="text-align:center; font-weight:bold;">ATTEMPTS: 0/5</p>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-tab active" onclick="tab('hub', this)">Match</button>
+        <button class="nav-tab" onclick="tab('team', this)">Team</button>
+        <button class="nav-tab" onclick="tab('shop', this)">Store</button>
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDp3h13LwtUlD7MiCkMys0EAgX5w2GGupc",
+        authDomain: "orixa-football-pro.firebaseapp.com",
+        projectId: "orixa-football-pro",
+        databaseURL: "https://orixa-football-pro-default-rtdb.firebaseio.com/",
+        storageBucket: "orixa-football-pro.firebasestorage.app",
+        messagingSenderId: "858773652420",
+        appId: "1:858773652420:web:efa892ddc9376c264a9a91"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const AD_URL = "https://hillshaveeyes.com/q2b71u4d?key=6716a50682ba951f2884f29df54460f4";
+
+    const DB_PLAYERS = [
+        { n: "L. Messi", r: 97, c: "epic", s: "LM" },
+        { n: "E. Haaland", r: 96, c: "epic", s: "EH" },
+        { n: "K. Mbappe", r: 96, c: "epic", s: "KM" },
+        { n: "M. Salah", r: 92, c: "standard", s: "MS" },
+        { n: "J. Bellingham", r: 93, c: "epic", s: "JB" }
+    ];
+
+    let userData = { gp: 5000, coins: 0, pts: 0, exp: 2, bst: 0, team: [], streak: 0, lastLogin: "" };
+    let userId = "", pAtt = 0, pGoals = 0, isAction = false;
+
+    auth.signInAnonymously().catch(e => console.error(e));
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            userId = user.uid;
+            db.ref('users/' + userId).on('value', snap => {
+                if (snap.exists()) userData = snap.val();
+                if(!userData.team) userData.team = [];
+                document.getElementById('loading-screen').style.display = 'none';
+                checkDaily();
+                sync();
+            });
+        }
+    });
+
+    function save() { if (userId) db.ref('users/' + userId).set(userData); }
+
+    function sync() {
+        document.getElementById('gp').innerText = userData.gp.toLocaleString();
+        document.getElementById('coins').innerText = userData.coins.toLocaleString();
+        document.getElementById('exp').innerText = userData.exp;
+        document.getElementById('bst').innerText = userData.bst;
+        let div = Math.max(1, 10 - Math.floor(userData.pts / 1000));
+        document.getElementById('div-num').innerText = div;
+        document.getElementById('div-prog').style.width = (userData.pts % 1000) / 10 + "%";
+        document.getElementById('div-title').innerText = div === 1 ? "LEGENDARY DIVISION" : "Elite League";
+        if(div === 1) document.getElementById('champ-banner').style.display = 'block';
+        render();
+    }
+
+    function tab(id, btn) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(btn) btn.classList.add('active');
+    }
+
+    function checkDaily() {
+        const today = new Date().toDateString();
+        if (userData.lastLogin !== today) {
+            const last = new Date(userData.lastLogin);
+            const diff = Math.floor((new Date() - last) / (1000 * 60 * 60 * 24));
+            userData.streak = (diff > 1) ? 1 : (userData.streak % 7) + 1;
+            const rewards = [
+                { t: "1,000 GP", i: "🔵", type: "gp", val: 1000 },
+                { t: "50 Coins", i: "🟡", type: "coins", val: 50 },
+                { t: "5 Exp Items", i: "🏃", type: "exp", val: 5 },
+                { t: "5,000 GP", i: "🔵", type: "gp", val: 5000 },
+                { t: "100 Coins", i: "🟡", type: "coins", val: 100 },
+                { t: "1 Booster", i: "⚡", type: "bst", val: 1 },
+                { t: "EPIC 105 OVR", i: "🌟", type: "player", val: 105 }
+            ];
+            const r = rewards[userData.streak - 1];
+            document.getElementById('streak-day').innerText = userData.streak;
+            document.getElementById('reward-icon').innerText = r.i;
+            document.getElementById('reward-text').innerText = r.t;
+            document.getElementById('login-bonus-ui').style.display = 'flex';
+            window.dailyP = { r, today };
+        }
+    }
+
+    function claimDaily() {
+        const p = window.dailyP;
+        if(p.r.type === "gp") userData.gp += p.r.val;
+        else if(p.r.type === "coins") userData.coins += p.r.val;
+        else if(p.r.type === "exp") userData.exp += p.r.val;
+        else if(p.r.type === "bst") userData.bst += p.r.val;
+        else if(p.r.type === "player") userData.team.push({ n: "ANNIVERSARY LEGEND", r: p.r.val, c: "epic", s: "★" });
+        userData.lastLogin = p.today; save();
+        document.getElementById('login-bonus-ui').style.display = 'none';
+        alert("Reward Claimed!");
+    }
+
+    function sign(type) {
+        if(type === 'epic' && userData.coins < 100) return alert("Not enough Coins!");
+        if(type === 'standard' && userData.gp < 5000) return alert("Not enough GP!");
+        type === 'epic' ? userData.coins -= 100 : userData.gp -= 5000;
+        let p = {...DB_PLAYERS[Math.floor(Math.random() * DB_PLAYERS.length)]};
+        userData.team.push(p); save(); alert("New Player Signed!");
+    }
+
+    function render() {
+        const list = document.getElementById('player-list');
+        list.innerHTML = '';
+        userData.team.forEach((p, i) => {
+            list.innerHTML += `<div class="player-card card-${p.c}">
+                <div class="p-rating">${p.r}</div>
+                <div class="p-img">${p.s}</div>
+                <div style="font-weight:bold; font-size:11px;">${p.n}</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:8px;">
+                    <button class="btn-mini" style="background:#fff;" onclick="lvl(${i})">LVL</button>
+                    <button class="btn-mini" style="background:var(--ef-gold);" onclick="bstp(${i})">BST</button>
+                </div>
+                <button class="btn-mini" style="width:100%; margin-top:5px; color:red; background:rgba(255,0,0,0.1);" onclick="rel(${i})">RELEASE</button>
+            </div>`;
+        });
+    }
+
+    function lvl(i) {
+        if(userData.exp < 1) return alert("No Exp!");
+        let max = userData.team[i].c === 'epic' ? 110 : 99;
+        if(userData.team[i].r < max) { userData.team[i].r++; userData.exp--; save(); }
+    }
+
+    function bstp(i) {
+        if(userData.bst < 1) return alert("No Boosters!");
+        if(userData.team[i].boosted) return alert("Already Boosted!");
+        userData.team[i].r += 2; userData.team[i].boosted = true; userData.team[i].c = 'epic'; userData.bst--; save();
+    }
+
+    function rel(i) {
+        if(confirm("Release player?")) { userData.gp += userData.team[i].r * 150; userData.team.splice(i, 1); save(); }
+    }
+
+    function watchAdReward() {
+        window.open(AD_URL, '_blank');
+        setTimeout(() => { userData.coins += 100; save(); alert("100 Coins Synced!"); }, 10000);
+    }
+
+    function playMatch() {
+        if(isAction) return; isAction = true;
+        window.open(AD_URL, '_blank');
+        setTimeout(() => { userData.gp += 2000; userData.pts += 400; userData.exp++; save(); alert("Victory! Rewards Synced."); isAction = false; }, 1500);
+    }
+
+    function takePenalty(pick) {
+        if(pAtt >= 5 || isAction) return; isAction = true;
+        const b = document.getElementById('ball');
+        const k = document.getElementById('keeper');
+        const kp = Math.floor(Math.random() * 3);
+        const ps = ["25%", "45%", "65%"];
+        k.style.left = ps[kp]; b.style.bottom = "140px"; b.style.left = ps[pick];
+        setTimeout(() => {
+            pAtt++; if(pick !== kp) pGoals++;
+            document.getElementById('p-score').innerText = `ATTEMPTS: ${pAtt}/5 | GOALS: ${pGoals}`;
+            b.style.bottom = "20px"; b.style.left = "47%";
+            if(pAtt === 5) {
+                if(pGoals === 5) { userData.team.push({ n: "PENALTY GOD", r: 108, c: "epic", s: "★" }); }
+                else { userData.gp += pGoals * 1000; }
+                pAtt = 0; pGoals = 0; save(); tab('hub');
+            }
+            isAction = false;
+        }, 600);
+    }
+</script>
+</body>
+</html>
